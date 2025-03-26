@@ -1,27 +1,14 @@
 {
-  "name": "my-data-portal",
-  "private": true,
-  "workspaces": [
-    "backend",
-    "frontend"
-  ],
+  "name": "data-portal",
   "scripts": {
-    "start:backend": "npm run start --workspace=backend",
-    "start:frontend": "npm run start --workspace=frontend",
-    "start:all": "concurrently \"npm run start:backend\" \"npm run start:frontend\"",
-    "build:backend": "npm run build --workspace=backend",
-    "build:frontend": "npm run build --workspace=frontend",
-    "lint": "npm run lint --workspace=backend && npm run lint --workspace=frontend",
-    "preview:backend": "npm run start:prod --workspace=backend",
-    "preview:frontend": "npm run build --workspace=frontend && npm run serve --workspace=frontend"
-  },
-  "devDependencies": {
-    "concurrently": "^9.1.2",
-    "serve": "^14.2.4"
+    "dev": "bun run --hot src/index.ts"
   },
   "dependencies": {
-    "@nestjs/typeorm": "^11.0.0",
-    "sqlite3": "^5.1.7",
-    "typeorm": "^0.3.21"
+    "hono": "^4.7.5",
+    "otplib": "^12.0.1",
+    "qrcode": "^1.5.4"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
   }
 }

@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Data Portal</title>
+  <!-- Alpine.js from CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+  <style>
+    body { font-family: sans-serif; margin: 2rem; }
+    input, button { padding: 0.5rem; margin: 0.25rem 0; display: block; }
+    button { cursor: pointer; }
+    .section { margin-bottom: 2rem; padding: 1rem; border: 1px solid #ccc; }
+    [x-cloak] { display: none !important; }
+  </style>
+</head>
+<body>
+  <div x-data="authApp()" x-cloak>
+    <!-- Login Section -->
+    <div class="section" x-show="step === 'login'" x-transition>
+      <h2>Login</h2>
+      <form @submit.prevent="login">
+        <input type="text" x-model="username" placeholder="Username" required />
+        <input type="password" x-model="password" placeholder="Password" required />
+        <button type="submit">Login</button>
+      </form>
+      <template x-if="loginError">
+        <p style="color:red;" x-text="loginError"></p>
+      </template>
+    </div>
+
+    <!-- 2FA Verification Section (QR code generation and token verification combined) -->
+    <div class="section" x-show="step === '2fa'" x-transition x-init="generate2FA()">
+      <h2>2FA Verification</h2>
+      <template x-if="twoFASecret">
+        <div>
+          <p><strong>Secret:</strong> <span x-text="twoFASecret"></span></p>
+          <p><strong>Scan this QR code with your authenticator app:</strong></p>
+          <img :src="qrCodeDataURL" alt="QR Code for 2FA" />
+        </div>
+      </template>
+      <input type="text" x-model="twoFAToken" placeholder="Enter 2FA Token" required />
+      <button @click="verify2FA">Verify Token</button>
+      <template x-if="verifyMessage">
+        <p x-text="verifyMessage"></p>
+      </template>
+    </div>
+
+    <!-- Protected Route Section -->
+    <div class="section" x-show="step === 'protected'" x-transition>
+      <h2>Access Protected Route</h2>
+      <button @click="accessProtected">Get Protected Message</button>
+      <template x-if="protectedMessage">
+        <p x-text="protectedMessage"></p>
+      </template>
+    </div>
+  </div>
+
+  <script>
+    function authApp() {
+      return {
+        // Possible steps: 'login', '2fa', 'protected'
+        step: 'login',
+        username: '',
+        password: '',
+        jwtToken: '',
+        loginError: '',
+        twoFASecret: '',
+        qrCodeDataURL: '',
+        twoFAToken: '',
+        verifyMessage: '',
+        protectedMessage: '',
+
+        async login() {
+          this.loginError = ''
+          try {
+            const res = await fetch('/login', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ username: this.username, password: this.password })
+            })
+            const data = await res.json()
+            if (res.ok) {
+              this.jwtToken = data.token
+              // Transition to the 2FA step
+              this.step = '2fa'
+            } else {
+              this.loginError = data.error || 'Login failed'
+            }
+          } catch (error) {
+            this.loginError = error.message
+          }
+        },
+
+        // Called automatically via x-init when the step becomes '2fa'
+        async generate2FA() {
+          try {
+            const res = await fetch('/generate-2fa')
+            const data = await res.json()
+            if (res.ok) {
+              this.twoFASecret = data.secret
+              this.qrCodeDataURL = data.qrCodeDataURL
+            }
+          } catch (error) {
+            console.error('Error generating 2FA:', error)
+          }
+        },
+
+        async verify2FA() {
+          try {
+            const res = await fetch('/verify-2fa', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ token: this.twoFAToken, secret: this.twoFASecret })
+            })
+            const data = await res.json()
+            if (res.ok) {
+              this.verifyMessage = data.message
+              // On successful 2FA verification, transition to the protected section
+              this.step = 'protected'
+            } else {
+              this.verifyMessage = data.error || 'Verification failed'
+            }
+          } catch (error) {
+            this.verifyMessage = error.message
+          }
+        },
+
+        async accessProtected() {
+          try {
+            const res = await fetch('/protected', {
+              headers: { 'Authorization': 'Bearer ' + this.jwtToken }
+            })
+            const data = await res.json()
+            if (res.ok) {
+              this.protectedMessage = data.message
+            } else {
+              this.protectedMessage = data.error || 'Failed to access protected route'
+            }
+          } catch (error) {
+            this.protectedMessage = error.message
+          }
+        }
+      }
+    }
+  </script>
+</body>
+</html>
+
