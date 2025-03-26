@@ -2,21 +2,98 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Data Portal</title>
+  <title>My Data Portal Frontend</title>
   <!-- Alpine.js from CDN -->
   <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
   <style>
-    body { font-family: sans-serif; margin: 2rem; }
-    input, button { padding: 0.5rem; margin: 0.25rem 0; display: block; }
-    button { cursor: pointer; }
-    .section { margin-bottom: 2rem; padding: 1rem; border: 1px solid #ccc; }
+    /* Reset and basic styling */
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: sans-serif;
+      background: #f7f7f7;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+    /* Container styling */
+    .container {
+      width: 100%;
+      max-width: 600px;
+      padding: 2rem;
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+    /* Section styling */
+    .section {
+      margin-bottom: 1.5rem;
+      padding: 1.5rem;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      background: #fafafa;
+    }
+    h2 {
+      margin-top: 0;
+      margin-bottom: 1rem;
+      font-size: 1.5rem;
+    }
+    input, button {
+      width: 100%;
+      padding: 0.75rem;
+      margin-bottom: 1rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    button {
+      background: #007bff;
+      color: #fff;
+      border: none;
+    }
+    button:hover {
+      background: #0056b3;
+    }
+    /* Error message styling */
+    .error {
+      background-color: #dc3545;
+      color: #fff;
+      padding: 0.5rem;
+      border-radius: 4px;
+      text-align: center;
+      font-weight: bold;
+      margin-bottom: 1rem;
+    }
+    /* Shake animation */
+    @keyframes shake {
+      0% { transform: translateX(0); }
+      20% { transform: translateX(-10px); }
+      40% { transform: translateX(10px); }
+      60% { transform: translateX(-10px); }
+      80% { transform: translateX(10px); }
+      100% { transform: translateX(0); }
+    }
+    .shake {
+      animation: shake 0.5s;
+    }
+    /* Hide elements until Alpine is ready */
     [x-cloak] { display: none !important; }
   </style>
 </head>
 <body>
-  <div x-data="authApp()" x-cloak>
+  <div class="container" x-data="authApp()" x-cloak>
     <!-- Login Section -->
-    <div class="section" x-show="step === 'login'" x-transition>
+    <div class="section" x-show="step === 'login'"
+         :class="{'shake': loginShake}"
+         x-transition:enter="transition ease-out duration-700"
+         x-transition:enter-start="opacity-0 transform translate-y-4"
+         x-transition:enter-end="opacity-100 transform translate-y-0"
+         x-transition:leave="transition ease-in duration-700"
+         x-transition:leave-start="opacity-100 transform translate-y-0"
+         x-transition:leave-end="opacity-0 transform translate-y-4">
       <h2>Login</h2>
       <form @submit.prevent="login">
         <input type="text" x-model="username" placeholder="Username" required />
@@ -24,29 +101,43 @@
         <button type="submit">Login</button>
       </form>
       <template x-if="loginError">
-        <p style="color:red;" x-text="loginError"></p>
+        <p class="error" x-text="loginError"></p>
       </template>
     </div>
 
-    <!-- 2FA Verification Section (QR code generation and token verification combined) -->
-    <div class="section" x-show="step === '2fa'" x-transition x-init="generate2FA()">
+    <!-- 2FA Verification Section -->
+    <div class="section" x-show="step === '2fa'"
+         :class="{'shake': verifyShake}"
+         x-transition:enter="transition ease-out duration-700"
+         x-transition:enter-start="opacity-0 transform translate-y-4"
+         x-transition:enter-end="opacity-100 transform translate-y-0"
+         x-transition:leave="transition ease-in duration-700"
+         x-transition:leave-start="opacity-100 transform translate-y-0"
+         x-transition:leave-end="opacity-0 transform translate-y-4"
+         x-init="generate2FA()">
       <h2>2FA Verification</h2>
       <template x-if="twoFASecret">
         <div>
           <p><strong>Secret:</strong> <span x-text="twoFASecret"></span></p>
           <p><strong>Scan this QR code with your authenticator app:</strong></p>
-          <img :src="qrCodeDataURL" alt="QR Code for 2FA" />
+          <img :src="qrCodeDataURL" alt="QR Code for 2FA" style="max-width:100%;"/>
         </div>
       </template>
       <input type="text" x-model="twoFAToken" placeholder="Enter 2FA Token" required />
       <button @click="verify2FA">Verify Token</button>
       <template x-if="verifyMessage">
-        <p x-text="verifyMessage"></p>
+        <p class="error" x-text="verifyMessage"></p>
       </template>
     </div>
 
     <!-- Protected Route Section -->
-    <div class="section" x-show="step === 'protected'" x-transition>
+    <div class="section" x-show="step === 'protected'"
+         x-transition:enter="transition ease-out duration-700"
+         x-transition:enter-start="opacity-0 transform translate-y-4"
+         x-transition:enter-end="opacity-100 transform translate-y-0"
+         x-transition:leave="transition ease-in duration-700"
+         x-transition:leave-start="opacity-100 transform translate-y-0"
+         x-transition:leave-end="opacity-0 transform translate-y-4">
       <h2>Access Protected Route</h2>
       <button @click="accessProtected">Get Protected Message</button>
       <template x-if="protectedMessage">
@@ -64,10 +155,12 @@
         password: '',
         jwtToken: '',
         loginError: '',
+        loginShake: false,
         twoFASecret: '',
         qrCodeDataURL: '',
         twoFAToken: '',
         verifyMessage: '',
+        verifyShake: false,
         protectedMessage: '',
 
         async login() {
@@ -85,9 +178,13 @@
               this.step = '2fa'
             } else {
               this.loginError = data.error || 'Login failed'
+              this.loginShake = true
+              setTimeout(() => this.loginShake = false, 500)
             }
           } catch (error) {
             this.loginError = error.message
+            this.loginShake = true
+            setTimeout(() => this.loginShake = false, 500)
           }
         },
 
@@ -119,9 +216,13 @@
               this.step = 'protected'
             } else {
               this.verifyMessage = data.error || 'Verification failed'
+              this.verifyShake = true
+              setTimeout(() => this.verifyShake = false, 500)
             }
           } catch (error) {
             this.verifyMessage = error.message
+            this.verifyShake = true
+            setTimeout(() => this.verifyShake = false, 500)
           }
         },
 
