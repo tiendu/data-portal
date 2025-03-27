@@ -7,79 +7,35 @@
   <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
   <style>
     /* Reset and basic styling */
-    *, *::before, *::after {
-      box-sizing: border-box;
-    }
+    *, *::before, *::after { box-sizing: border-box; }
     body {
-      margin: 0;
-      padding: 0;
-      font-family: sans-serif;
-      background: #f7f7f7;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
+      margin: 0; padding: 0; font-family: sans-serif;
+      background: #f7f7f7; display: flex; justify-content: center; align-items: center; height: 100vh;
     }
     /* Container styling */
     .container {
-      width: 100%;
-      max-width: 600px;
-      padding: 2rem;
-      background: #fff;
-      border-radius: 8px;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      width: 100%; max-width: 600px; padding: 2rem;
+      background: #fff; border-radius: 8px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     }
     /* Section styling */
     .section {
-      margin-bottom: 1.5rem;
-      padding: 1.5rem;
-      border: 1px solid #ddd;
-      border-radius: 4px;
-      background: #fafafa;
+      margin-bottom: 1.5rem; padding: 1.5rem;
+      border: 1px solid #ddd; border-radius: 4px; background: #fafafa;
     }
-    h2 {
-      margin-top: 0;
-      margin-bottom: 1rem;
-      font-size: 1.5rem;
-    }
+    h2 { margin-top: 0; margin-bottom: 1rem; font-size: 1.5rem; }
     input, button {
-      width: 100%;
-      padding: 0.75rem;
-      margin-bottom: 1rem;
-      border: 1px solid #ccc;
-      border-radius: 4px;
+      width: 100%; padding: 0.75rem; margin-bottom: 1rem; border: 1px solid #ccc; border-radius: 4px;
     }
-    button {
-      background: #007bff;
-      color: #fff;
-      border: none;
-    }
-    button:hover {
-      background: #0056b3;
-    }
-    /* Error message styling */
+    button { background: #007bff; color: #fff; border: none; }
+    button:hover { background: #0056b3; }
     .error {
-      background-color: #dc3545;
-      color: #fff;
-      padding: 0.5rem;
-      border-radius: 4px;
-      text-align: center;
-      font-weight: bold;
-      margin-bottom: 1rem;
+      background-color: #dc3545; color: #fff; padding: 0.5rem;
+      border-radius: 4px; text-align: center; font-weight: bold; margin-bottom: 1rem;
     }
-    /* Shake animation */
-    @keyframes shake {
-      0% { transform: translateX(0); }
-      20% { transform: translateX(-10px); }
-      40% { transform: translateX(10px); }
-      60% { transform: translateX(-10px); }
-      80% { transform: translateX(10px); }
-      100% { transform: translateX(0); }
-    }
-    .shake {
-      animation: shake 0.5s;
-    }
-    /* Hide elements until Alpine is ready */
+    @keyframes shake { 0% { transform: translateX(0); } 20% { transform: translateX(-10px); }
+      40% { transform: translateX(10px); } 60% { transform: translateX(-10px); } 80% { transform: translateX(10px); }
+      100% { transform: translateX(0); } }
+    .shake { animation: shake 0.5s; }
     [x-cloak] { display: none !important; }
   </style>
 </head>
@@ -105,32 +61,37 @@
       </template>
     </div>
 
-    <!-- 2FA Verification Section -->
-    <div class="section" x-show="step === '2fa'"
-         :class="{'shake': verifyShake}"
-         x-transition:enter="transition ease-out duration-700"
-         x-transition:enter-start="opacity-0 transform translate-y-4"
-         x-transition:enter-end="opacity-100 transform translate-y-0"
-         x-transition:leave="transition ease-in duration-700"
-         x-transition:leave-start="opacity-100 transform translate-y-0"
-         x-transition:leave-end="opacity-0 transform translate-y-4"
-         x-init="generate2FA()">
-      <h2>2FA Verification</h2>
-      <template x-if="twoFASecret">
-        <div>
-          <p><strong>Secret:</strong> <span x-text="twoFASecret"></span></p>
-          <p><strong>Scan this QR code with your authenticator app:</strong></p>
-          <img :src="qrCodeDataURL" alt="QR Code for 2FA" style="max-width:100%;"/>
-        </div>
-      </template>
-      <input type="text" x-model="twoFAToken" placeholder="Enter 2FA Token" required />
-      <button @click="verify2FA">Verify Token</button>
-      <template x-if="verifyMessage">
-        <p class="error" x-text="verifyMessage"></p>
-      </template>
+<!-- 2FA Verification Section -->
+<div class="section" x-show="step === '2fa'"
+     :class="{'shake': verifyShake}"
+     x-transition:enter="transition ease-out duration-700"
+     x-transition:enter-start="opacity-0 transform translate-y-4"
+     x-transition:enter-end="opacity-100 transform translate-y-0"
+     x-transition:leave="transition ease-in duration-700"
+     x-transition:leave-start="opacity-100 transform translate-y-0"
+     x-transition:leave-end="opacity-0 transform translate-y-4"
+     x-effect="if(step==='2fa' && !twoFASecret) generate2FA()">
+  <h2>2FA Verification</h2>
+  
+  <!-- Show the QR code and secret only if qrCodeDataURL exists -->
+  <template x-if="qrCodeDataURL">
+    <div>
+      <p><strong>Secret:</strong> <span x-text="twoFASecret"></span></p>
+      <p><strong>Scan this QR code with your authenticator app:</strong></p>
+      <img :src="qrCodeDataURL" alt="QR Code for 2FA" style="max-width:100%;" />
     </div>
+  </template>
 
-    <!-- Protected Route Section -->
+  <!-- Always show token input and verify button -->
+  <input type="text" x-model="twoFAToken" placeholder="Enter 2FA Token" required />
+  <button @click="verify2FA()">Verify Token</button>
+  
+  <template x-if="verifyMessage">
+    <p class="error" x-text="verifyMessage"></p>
+  </template>
+</div>
+
+   <!-- Protected Route Section -->
     <div class="section" x-show="step === 'protected'"
          x-transition:enter="transition ease-out duration-700"
          x-transition:enter-start="opacity-0 transform translate-y-4"
@@ -138,7 +99,7 @@
          x-transition:leave="transition ease-in duration-700"
          x-transition:leave-start="opacity-100 transform translate-y-0"
          x-transition:leave-end="opacity-0 transform translate-y-4">
-      <h2>Access Protected Route</h2>
+      <h2>Protected Content</h2>
       <button @click="accessProtected">Get Protected Message</button>
       <template x-if="protectedMessage">
         <p x-text="protectedMessage"></p>
@@ -164,43 +125,53 @@
         protectedMessage: '',
 
         async login() {
-          this.loginError = ''
+          this.loginError = '';
           try {
             const res = await fetch('/login', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ username: this.username, password: this.password })
-            })
-            const data = await res.json()
+            });
+            const data = await res.json();
             if (res.ok) {
-              this.jwtToken = data.token
+              this.jwtToken = data.token;
               // Transition to the 2FA step
-              this.step = '2fa'
+              this.step = '2fa';
             } else {
-              this.loginError = data.error || 'Login failed'
-              this.loginShake = true
-              setTimeout(() => this.loginShake = false, 500)
+              this.loginError = data.error || 'Login failed';
+              this.loginShake = true;
+              setTimeout(() => this.loginShake = false, 500);
             }
           } catch (error) {
-            this.loginError = error.message
-            this.loginShake = true
-            setTimeout(() => this.loginShake = false, 500)
+            this.loginError = error.message;
+            this.loginShake = true;
+            setTimeout(() => this.loginShake = false, 500);
           }
         },
 
-        // Called automatically via x-init when the step becomes '2fa'
-        async generate2FA() {
-          try {
-            const res = await fetch('/generate-2fa')
-            const data = await res.json()
-            if (res.ok) {
-              this.twoFASecret = data.secret
-              this.qrCodeDataURL = data.qrCodeDataURL
-            }
-          } catch (error) {
-            console.error('Error generating 2FA:', error)
-          }
-        },
+async generate2FA() {
+  try {
+    const res = await fetch('/generate-2fa', {
+      headers: { 'Authorization': 'Bearer ' + this.jwtToken }
+    });
+    const data = await res.json();
+    if (res.ok) {
+      // If the server indicates 2FA is already set up, leave twoFASecret empty.
+      if (data.alreadySetUp) {
+        this.twoFASecret = data.secret;
+        this.qrCodeDataURL = "";
+      } else {
+        // Otherwise, set the secret and QR code URL.
+        this.twoFASecret = data.secret;
+        this.qrCodeDataURL = data.qrCodeDataURL;
+      }
+    } else {
+      this.errorMessage = data.error || 'Failed to generate 2FA';
+    }
+  } catch (error) {
+    this.errorMessage = error.message;
+  }
+},
 
         async verify2FA() {
           try {
@@ -208,21 +179,21 @@
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ token: this.twoFAToken, secret: this.twoFASecret })
-            })
-            const data = await res.json()
+            });
+            const data = await res.json();
             if (res.ok) {
-              this.verifyMessage = data.message
+              this.verifyMessage = data.message;
               // On successful 2FA verification, transition to the protected section
-              this.step = 'protected'
+              this.step = 'protected';
             } else {
-              this.verifyMessage = data.error || 'Verification failed'
-              this.verifyShake = true
-              setTimeout(() => this.verifyShake = false, 500)
+              this.verifyMessage = data.error || 'Verification failed';
+              this.verifyShake = true;
+              setTimeout(() => this.verifyShake = false, 500);
             }
           } catch (error) {
-            this.verifyMessage = error.message
-            this.verifyShake = true
-            setTimeout(() => this.verifyShake = false, 500)
+            this.verifyMessage = error.message;
+            this.verifyShake = true;
+            setTimeout(() => this.verifyShake = false, 500);
           }
         },
 
@@ -230,15 +201,15 @@
           try {
             const res = await fetch('/protected', {
               headers: { 'Authorization': 'Bearer ' + this.jwtToken }
-            })
-            const data = await res.json()
+            });
+            const data = await res.json();
             if (res.ok) {
-              this.protectedMessage = data.message
+              this.protectedMessage = data.message;
             } else {
-              this.protectedMessage = data.error || 'Failed to access protected route'
+              this.protectedMessage = data.error || 'Failed to access protected route';
             }
           } catch (error) {
-            this.protectedMessage = error.message
+            this.protectedMessage = error.message;
           }
         }
       }

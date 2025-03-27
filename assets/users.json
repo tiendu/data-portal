@@ -1,0 +1,16 @@
+[
+  {
+    "username": "test",
+    "password": "123",
+    "twoFASecret": "NJYG6R2ZFALQ4GDT"
+  },
+  {
+    "username": "alice",
+    "password": "alicepass",
+    "twoFASecret": "DYESG7C7JAUG2ZB2"
+  },
+  {
+    "username": "bob",
+    "password": "bobpass"
+  }
+]
