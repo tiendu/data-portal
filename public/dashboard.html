@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Dashboard - My Data Portal</title>
+  <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script>
+  <style>
+    /* Styles for dashboard */
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background-color: #f7f7f7;
+      height: 100vh;
+      display: flex;
+    }
+    .dashboard-container {
+      display: flex;
+      width: 100%;
+    }
+    .sidebar {
+      width: 220px;
+      background-color: #007bff;
+      padding: 1rem;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+    }
+    .sidebar h3 {
+      margin: 0 0 1.5rem;
+      font-size: 1.5rem;
+    }
+    .sidebar button {
+      background: transparent;
+      border: none;
+      border-radius: 10px;
+      color: #fff;
+      text-align: left;
+      padding: 0.5rem 1rem;
+      margin: 0.25rem 0;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+    .sidebar button:hover {
+      background-color: rgba(255, 255, 255, 0.2);
+    }
+    .content {
+      flex: 1;
+      padding: 1rem;
+      background: #f9f9f9;
+      overflow-y: auto;
+    }
+    .input-field {
+      padding: 0.5rem;
+      margin-bottom: 1rem;
+      width: 100%;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    .btn {
+      padding: 0.5rem 1rem;
+      background-color: #007bff;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .btn:hover {
+      background-color: #0056b3;
+    }
+  </style>
+</head>
+<body>
+  <div class="dashboard-container" x-data="dashboardApp()" x-init="init()">
+    <!-- Sidebar -->
+    <div class="sidebar">
+      <h3>Dashboard</h3>
+      <button @click="currentView = 'data'">Data Portal</button>
+      <button @click="currentView = 'shell'">Shell Terminal</button>
+    </div>
+    <!-- Main Content Area -->
+    <div class="content">
+      <template x-if="currentView === 'data'">
+        <div>
+          <h2>Data Portal</h2>
+          <!-- File Upload Section -->
+          <p>Upload your file:</p>
+          <form @submit.prevent="uploadFile">
+            <input type="file" name="file" class="input-field" @change="handleFileChange" required />
+            <button type="submit" class="btn">Upload File</button>
+          </form>
+          <p x-text="uploadMessage"></p>
+          
+          <!-- File Download Section -->
+          <h3 class="mt-8">Download File</h3>
+          <form @submit.prevent="downloadFile">
+            <input type="text" x-model="downloadFilename" placeholder="Filename to download" class="input-field" required />
+            <button type="submit" class="btn">Download File</button>
+          </form>
+          <p x-text="downloadMessage"></p>
+        </div>
+      </template>
+      <template x-if="currentView === 'shell'">
+        <div>
+          <h2>Shell Terminal</h2>
+          <p>Access the terminal interface here.</p>
+          <!-- Insert Terminal functionality -->
+        </div>
+      </template>
+    </div>
+  </div>
+  <script>
+    function dashboardApp() {
+      return {
+        currentView: 'data',
+        token: '',
+        selectedFile: null,
+        uploadMessage: '',
+        downloadMessage: '',
+        downloadFilename: '',
+        init() {
+          this.token = localStorage.getItem('jwtToken');
+          if (!this.token) {
+            window.location.href = '/'; // Redirect to login if token is missing.
+          }
+        },
+        handleFileChange(event) {
+          this.selectedFile = event.target.files[0];
+        },
+        async uploadFile() {
+          this.uploadMessage = '';
+          if (!this.selectedFile) {
+            this.uploadMessage = 'No file selected.';
+            return;
+          }
+          const formData = new FormData();
+          formData.append('file', this.selectedFile);
+          try {
+            const res = await fetch('/upload', {
+              method: 'POST',
+              headers: { 'Authorization': 'Bearer ' + this.token },
+              body: formData,
+            });
+            const data = await res.json();
+            if (res.ok) {
+              this.uploadMessage = data.message;
+            } else {
+              this.uploadMessage = data.error || 'Upload failed';
+            }
+          } catch (error) {
+            this.uploadMessage = error.message;
+          }
+        },
+        async downloadFile() {
+          this.downloadMessage = '';
+          const filename = this.downloadFilename;
+          if (!filename) {
+            this.downloadMessage = 'Please enter a filename.';
+            return;
+          }
+          try {
+            const res = await fetch('/download?filename=' + encodeURIComponent(filename), {
+              headers: { 'Authorization': 'Bearer ' + this.token },
+            });
+            if (res.ok) {
+              const blob = await res.blob();
+              const url = window.URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = filename;
+              document.body.appendChild(a);
+              a.click();
+              a.remove();
+              window.URL.revokeObjectURL(url);
+              this.downloadMessage = 'Download initiated.';
+            } else {
+              const data = await res.json();
+              this.downloadMessage = data.error || 'Download failed';
+            }
+          } catch (error) {
+            this.downloadMessage = error.message;
+          }
+        },
+      };
+    }
+    document.addEventListener('alpine:init', () => {
+      Alpine.data('dashboardApp', dashboardApp);
+    });
+  </script>
+</body>
+</html>
+

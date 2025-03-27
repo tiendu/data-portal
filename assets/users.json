@@ -2,12 +2,12 @@
   {
     "username": "test",
     "password": "123",
-    "twoFASecret": "NJYG6R2ZFALQ4GDT"
+    "twoFASecret": "CNUEC43XKFRQS6DC"
   },
   {
     "username": "alice",
     "password": "alicepass",
-    "twoFASecret": "DYESG7C7JAUG2ZB2"
+    "twoFASecret": "HJRBUVLAJBDTYCBA"
   },
   {
     "username": "bob",

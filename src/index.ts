@@ -5,6 +5,7 @@ import { jwt, sign } from 'hono/jwt';
 import type { JwtVariables } from 'hono/jwt';
 import { authenticator } from 'otplib';
 import { findUser, getUserByUsername, updateUserTwoFASecret } from './users';
+import { mkdir } from 'fs/promises';
 import qrcode from 'qrcode';
 
 // Secret key for JWT signing
@@ -21,6 +22,9 @@ app.use('/public/*', serveStatic({ root: './public' }));
 
 // Serve index.html at the root URL
 app.get('/', (c) => new Response(Bun.file('./public/index.html')));
+
+// Serve dashboard.html at /dashboard URL
+app.get('/dashboard', (c) => new Response(Bun.file('./public/dashboard.html')))
 
 // Login endpoint using Hono's sign function for JWT creation.
 app.post('/login', async (c) => {
@@ -68,18 +72,83 @@ app.get('/generate-2fa', jwt({ secret: JWT_SECRET }), async (c) => {
 });
 
 // 2FA: Verify token
-app.post('/verify-2fa', async (c) => {
-  const { token, secret } = await c.req.json();
-  const isValid = authenticator.check(token, secret);
+app.post('/verify-2fa', jwt({ secret: JWT_SECRET }), async (c) => {
+  // Get the 2FA token and secret from the request body
+  const { token: twoFAToken, secret: twoFASecret } = await c.req.json();
+
+  // Retrieve the username from the verified JWT payload (sent along with the request)
+  const payload = c.get('jwtPayload');
+  const username = payload?.sub;
+  if (!username) {
+    return c.json({ error: 'Unauthorized' }, 401);
+  }
+
+  // Validate the 2FA code
+  const isValid = authenticator.check(twoFAToken, twoFASecret);
   if (isValid) {
-    return c.json({ success: true, message: '2FA token verified' });
+    // Build a new payload for the session token
+    const newPayload = {
+      sub: username,
+      iat: Math.floor(Date.now() / 1000),
+      exp: Math.floor(Date.now() / 1000) + 60 * 60, // e.g., valid for 1 hour
+    };
+    // Generate a new JWT session token using your secret key
+    const sessionToken = await sign(newPayload, JWT_SECRET);
+    return c.json({ success: true, message: '2FA token verified', token: sessionToken });
   }
   return c.json({ error: 'Invalid 2FA token' }, 401);
 });
 
-// Additional protected endpoint example.
-app.get('/protected', jwt({ secret: JWT_SECRET }), (c) => {
-  return c.json({ message: 'This is a protected route.' });
+// Upload Endpoint: Save a file to the user's dedicated directory.
+app.post('/upload', jwt({ secret: JWT_SECRET }), async (c) => {
+  try {
+    // Get the username from the JWT payload.
+    const payload = c.get('jwtPayload');
+    const username = payload?.sub;
+    if (!username) return c.json({ error: 'Unauthorized' }, 401);
+    console.log("Successfully logged in!");
+    // Parse the form data.
+    const formData = await c.req.formData();
+    const file = formData.get('file');
+    console.log(`Uploading:`, file);
+    if (!file) return c.json({ error: 'No file provided' }, 400);
+
+    // Determine the user's asset directory.
+    const userDir = `./assets/${username}`;
+    // Create the directory if it doesn't exist.
+    await mkdir(userDir, { recursive: true });
+
+    // Get the original file name.
+    const fileName = file.name || 'uploadfile';
+    const filePath = `${userDir}/${fileName}`;
+
+    // Convert the uploaded file to a Buffer.
+    const buffer = Buffer.from(await file.arrayBuffer());
+    await Bun.write(filePath, buffer);
+
+    return c.json({ success: true, message: 'File uploaded successfully', filePath });
+  } catch (error) {
+    console.error('Upload error:', error);
+    return c.json({ error: 'Upload failed' }, 500);
+  }
+});
+
+// Download Endpoint: Retrieve a file from the user's directory.
+app.get('/download', jwt({ secret: JWT_SECRET }), async (c) => {
+  const payload = c.get('jwtPayload');
+  const username = payload?.sub;
+  if (!username) return c.json({ error: 'Unauthorized' }, 401);
+  
+  const fileName = c.req.query('filename');
+  if (!fileName) return c.json({ error: 'Missing filename' }, 400);
+  
+  const filePath = `./assets/${username}/${fileName}`;
+  try {
+    await Bun.stat(filePath);
+    return c.body(Bun.file(filePath));
+  } catch (err) {
+    return c.json({ error: 'File not found' }, 404);
+  }
 });
 
 // Start the server using Bun.serve.

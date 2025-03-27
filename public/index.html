@@ -61,37 +61,32 @@
       </template>
     </div>
 
-<!-- 2FA Verification Section -->
-<div class="section" x-show="step === '2fa'"
-     :class="{'shake': verifyShake}"
-     x-transition:enter="transition ease-out duration-700"
-     x-transition:enter-start="opacity-0 transform translate-y-4"
-     x-transition:enter-end="opacity-100 transform translate-y-0"
-     x-transition:leave="transition ease-in duration-700"
-     x-transition:leave-start="opacity-100 transform translate-y-0"
-     x-transition:leave-end="opacity-0 transform translate-y-4"
-     x-effect="if(step==='2fa' && !twoFASecret) generate2FA()">
-  <h2>2FA Verification</h2>
-  
-  <!-- Show the QR code and secret only if qrCodeDataURL exists -->
-  <template x-if="qrCodeDataURL">
-    <div>
-      <p><strong>Secret:</strong> <span x-text="twoFASecret"></span></p>
-      <p><strong>Scan this QR code with your authenticator app:</strong></p>
-      <img :src="qrCodeDataURL" alt="QR Code for 2FA" style="max-width:100%;" />
+    <!-- 2FA Verification Section -->
+    <div class="section" x-show="step === '2fa'"
+         :class="{'shake': verifyShake}"
+         x-transition:enter="transition ease-out duration-700"
+         x-transition:enter-start="opacity-0 transform translate-y-4"
+         x-transition:enter-end="opacity-100 transform translate-y-0"
+         x-transition:leave="transition ease-in duration-700"
+         x-transition:leave-start="opacity-100 transform translate-y-0"
+         x-transition:leave-end="opacity-0 transform translate-y-4"
+         x-effect="if(step==='2fa' && !twoFASecret) generate2FA()">
+      <h2>2FA Verification</h2>
+      <template x-if="qrCodeDataURL">
+        <div>
+          <p><strong>Secret:</strong> <span x-text="twoFASecret"></span></p>
+          <p><strong>Scan this QR code with your authenticator app:</strong></p>
+          <img :src="qrCodeDataURL" alt="QR Code for 2FA" style="max-width:100%;" />
+        </div>
+      </template>
+      <input type="text" x-model="twoFAToken" placeholder="Enter 2FA Token" required />
+      <button @click="verify2FA()">Verify Token</button>
+      <template x-if="verifyMessage">
+        <p class="error" x-text="verifyMessage"></p>
+      </template>
     </div>
-  </template>
 
-  <!-- Always show token input and verify button -->
-  <input type="text" x-model="twoFAToken" placeholder="Enter 2FA Token" required />
-  <button @click="verify2FA()">Verify Token</button>
-  
-  <template x-if="verifyMessage">
-    <p class="error" x-text="verifyMessage"></p>
-  </template>
-</div>
-
-   <!-- Protected Route Section -->
+    <!-- Protected Route Section (for testing) -->
     <div class="section" x-show="step === 'protected'"
          x-transition:enter="transition ease-out duration-700"
          x-transition:enter-start="opacity-0 transform translate-y-4"
@@ -135,6 +130,8 @@
             const data = await res.json();
             if (res.ok) {
               this.jwtToken = data.token;
+              // Optionally, store the token now if you want to persist across refreshes:
+              localStorage.setItem('jwtToken', this.jwtToken);
               // Transition to the 2FA step
               this.step = '2fa';
             } else {
@@ -149,42 +146,44 @@
           }
         },
 
-async generate2FA() {
-  try {
-    const res = await fetch('/generate-2fa', {
-      headers: { 'Authorization': 'Bearer ' + this.jwtToken }
-    });
-    const data = await res.json();
-    if (res.ok) {
-      // If the server indicates 2FA is already set up, leave twoFASecret empty.
-      if (data.alreadySetUp) {
-        this.twoFASecret = data.secret;
-        this.qrCodeDataURL = "";
-      } else {
-        // Otherwise, set the secret and QR code URL.
-        this.twoFASecret = data.secret;
-        this.qrCodeDataURL = data.qrCodeDataURL;
-      }
-    } else {
-      this.errorMessage = data.error || 'Failed to generate 2FA';
-    }
-  } catch (error) {
-    this.errorMessage = error.message;
-  }
-},
+        async generate2FA() {
+          try {
+            const res = await fetch('/generate-2fa', {
+              headers: { 'Authorization': 'Bearer ' + this.jwtToken }
+            });
+            const data = await res.json();
+            if (res.ok) {
+              if (data.alreadySetUp) {
+                this.twoFASecret = data.secret;
+                this.qrCodeDataURL = "";
+              } else {
+                this.twoFASecret = data.secret;
+                this.qrCodeDataURL = data.qrCodeDataURL;
+              }
+            } else {
+              this.verifyMessage = data.error || 'Failed to generate 2FA';
+            }
+          } catch (error) {
+            this.verifyMessage = error.message;
+          }
+        },
 
         async verify2FA() {
           try {
             const res = await fetch('/verify-2fa', {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ token: this.twoFAToken, secret: this.twoFASecret })
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + this.jwtToken,
+              },
+              body: JSON.stringify({ token: this.twoFAToken, secret: this.twoFASecret }),
             });
             const data = await res.json();
             if (res.ok) {
-              this.verifyMessage = data.message;
-              // On successful 2FA verification, transition to the protected section
-              this.step = 'protected';
+              // Store the new token in localStorage
+              localStorage.setItem('jwtToken', data.token);
+              // Redirect to dashboard.
+              window.location.href = '/dashboard';
             } else {
               this.verifyMessage = data.error || 'Verification failed';
               this.verifyShake = true;
